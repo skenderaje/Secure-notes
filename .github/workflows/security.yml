@@ -51,6 +51,9 @@ jobs:
       - run: bandit -r app --format txt
         continue-on-error: true
       - run: bandit -r app --severity-level high --confidence-level medium --quiet
+      # Finding 001: string-built SQL slipped past the high-only gate as "medium".
+      # Block that one check at any severity and confidence.
+      - run: bandit -r app --tests B608 --quiet
 
   dependencies:
     name: Dependency audit (pip-audit)

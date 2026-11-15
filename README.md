@@ -5,8 +5,8 @@
 A small notes app built to be secured end to end: threat-modelled, tested, scanned in CI
 and deployed. The app is deliberately simple so the security work is easy to follow.
 
-> Status: **phase 3 of 5** — app, security tests, threat model and CI security pipeline
-> done. A find-and-fix pull request and deployment are next.
+> Status: **phase 4 of 5** — app, security tests, threat model, CI security pipeline and a
+> find-and-fix pull request done. Deployment is next.
 
 ## Roadmap
 
@@ -15,8 +15,8 @@ and deployed. The app is deliberately simple so the security work is easy to fol
 | 1 | App with security controls, each covered by a test | ✅ Done |
 | 2 | [Threat model](docs/threat-model.md): STRIDE per element, mapped to MITRE ATT&CK, with a [data-flow diagram](docs/threat-model-dfd.html) of the trust boundaries | ✅ Done |
 | 3 | [GitHub Actions pipeline](.github/workflows/security.yml) that fails the build on high-severity findings | ✅ Done |
-| 4 | A vulnerability found and fixed through a pull request | Next |
-| 5 | Live deployment and a secure-SDLC write-up | Planned |
+| 4 | A vulnerability found and fixed through a pull request — [finding 001](docs/findings/001-search-sql-injection.md) | ✅ Done |
+| 5 | Live deployment and a secure-SDLC write-up | Next |
 
 ## Threat model
 
@@ -60,7 +60,7 @@ on every pull request and once a week. Any failing gate blocks the change.
 | Gate | Tool | Fails the build when |
 |---|---|---|
 | Security tests | pytest | any control's test fails |
-| Code scan (SAST) | Bandit | a high-severity finding with at least medium confidence |
+| Code scan (SAST) | Bandit | a high-severity finding with at least medium confidence, or any string-built SQL (B608) |
 | Dependency audit (SCA) | pip-audit | any pinned runtime dependency has a known vulnerability |
 | Secret scan | gitleaks | a secret appears anywhere in the git history |
 
@@ -74,6 +74,16 @@ pinned in phase 1: `python-multipart 0.0.20` (6 advisories) and `starlette 0.41.
 `starlette 1.10.0` cleared them. The upgrade also changed when Starlette sends the session
 cookie (only when the session changes), which broke a test; the cookie flags were still
 correct, so the test now checks the two responses that set the cookie.
+
+## Findings
+
+| ID | Finding | Severity | Introduced → fixed |
+|---|---|---|---|
+| [001](docs/findings/001-search-sql-injection.md) | SQL injection in note search let any user read every note | High | PR #3 → PR #4 |
+
+Finding 001 was **seeded on purpose** to practise the full loop: review the diff, prove the
+bug with a failing test, fix it, and close the gap that let it through CI (Bandit rated it
+medium, below the high-only gate; string-built SQL is now blocked at any severity).
 
 ## Run locally
 
