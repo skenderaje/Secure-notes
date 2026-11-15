@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}My notes · SecureNotes{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>New note</h1>
+  <form method="post" action="/notes">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>Title <input name="title" required maxlength="{{ title_max }}"></label>
+    <label>Text <textarea name="body" rows="4" maxlength="{{ body_max }}"></textarea></label>
+    <button type="submit">Save</button>
+  </form>
+</section>
+
+<section>
+  <h2>My notes</h2>
+  {% for note in notes %}
+    <article class="card note">
+      <h3>{{ note.title }}</h3>
+      <p class="body">{{ note.body }}</p>
+      <div class="actions">
+        <a href="/notes/{{ note.id }}/edit">Edit</a>
+        <form method="post" action="/notes/{{ note.id }}/delete" class="inline">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <button type="submit" class="link danger">Delete</button>
+        </form>
+      </div>
+    </article>
+  {% else %}
+    <p class="muted">No notes yet.</p>
+  {% endfor %}
+</section>
+{% endblock %}

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SecureNotes — data flow and trust boundaries</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper:   #f5f5f5;
+      --color-ink:     #2d3142;
+      --color-muted:   #4f5d75;
+      --color-accent:  #bf4520;
+      --font-sans:     'Geist', system-ui, sans-serif;
+      --font-serif:    'Instrument Serif', serif;
+      --font-mono:     'Geist Mono', ui-monospace, monospace;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      color: var(--color-ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+    }
+
+    .frame { max-width: 1320px; width: 100%; }
+    .diagram-container { width: 100%; overflow-x: auto; }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--color-ink);
+      margin-bottom: 1.5rem;
+    }
+
+    svg { width: 100%; min-width: 1280px; display: block; }
+    @media print {
+      .diagram-container { overflow-x: visible; }
+      svg { min-width: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Architecture · Threat model · SecureNotes</p>
+    <h1>Every request crosses two boundaries before it touches a note</h1>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 1280 576" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="threat-model-dfd-title threat-model-dfd-desc">
+        <title id="threat-model-dfd-title">SecureNotes data flow and trust boundaries</title>
+        <desc id="threat-model-dfd-desc">A user's request travels over HTTPS through the hosting edge and the request guards before the app reads notes from PostgreSQL with an owner check, while an attacker's direct path to the database is blocked at the private zone.</desc>
+        <defs>
+          <pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse">
+            <circle cx="1" cy="1" r="0.9" fill="rgba(45,49,66,0.10)"/>
+          </pattern>
+          <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+          <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker>
+          <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker>
+        </defs>
+
+        <rect width="100%" height="100%" fill="#f5f5f5"/>
+        <rect width="100%" height="100%" fill="url(#dots)" opacity="0.55"/>
+
+        <!-- Zones (trust boundaries), drawn before arrows and nodes -->
+        <rect x="40" y="176" width="240" height="304" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+        <rect x="100" y="180" width="120" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="160" y="189" fill="#5a6580" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">INTERNET · UNTRUSTED</text>
+
+        <rect x="320" y="176" width="200" height="304" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+        <rect x="380" y="180" width="80" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="420" y="189" fill="#5a6580" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">HOSTING EDGE</text>
+
+        <rect x="560" y="176" width="680" height="304" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.30)" stroke-width="1" stroke-dasharray="6,4"/>
+        <rect x="836" y="180" width="128" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="900" y="189" fill="#5a6580" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">PRIVATE · APP + DATA</text>
+
+        <!-- Arrows (behind boxes) -->
+        <!-- Browser → TLS proxy: HTTPS -->
+        <line x1="248" y1="240" x2="344" y2="240" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+        <!-- TLS proxy → request guards -->
+        <line x1="496" y1="240" x2="592" y2="240" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <!-- Request guards → app: the headline path -->
+        <line x1="760" y1="240" x2="812" y2="240" stroke="#bf4520" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+        <!-- App → PostgreSQL -->
+        <line x1="992" y1="240" x2="1036" y2="240" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <!-- Secrets → app: read once at start (dashed, passive) -->
+        <line x1="902" y1="384" x2="902" y2="272" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+        <!-- Attacker → database: blocked before the private zone -->
+        <line x1="248" y1="416" x2="540" y2="416" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="2,3"/>
+        <circle cx="548" cy="416" r="7" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/>
+        <line x1="544" y1="412" x2="552" y2="420" stroke="#4f5d75" stroke-width="1.2"/>
+        <line x1="552" y1="412" x2="544" y2="420" stroke="#4f5d75" stroke-width="1.2"/>
+
+        <!-- Arrow labels (masked, 6px gap above each stroke) -->
+        <rect x="272" y="222" width="48" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="296" y="231" fill="#2e5aa8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">HTTPS</text>
+
+        <rect x="524" y="222" width="40" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="544" y="231" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">HTTP</text>
+
+        <rect x="764" y="222" width="44" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="786" y="231" fill="#bf4520" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">AUTHED</text>
+
+        <rect x="996" y="222" width="36" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="1014" y="231" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">SQL</text>
+
+        <rect x="910" y="322" width="32" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="926" y="331" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">ENV</text>
+
+        <rect x="360" y="398" width="68" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="394" y="407" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DIRECT DB</text>
+
+        <!-- Node: User browser (input) -->
+        <rect x="72" y="208" width="176" height="64" rx="6" fill="#f5f5f5"/>
+        <rect x="72" y="208" width="176" height="64" rx="6" fill="rgba(79,93,117,0.10)" stroke="#5a6580" stroke-width="1"/>
+        <rect x="80" y="216" width="32" height="12" rx="2" fill="transparent" stroke="rgba(90,101,128,0.40)" stroke-width="0.8"/>
+        <text x="96" y="225" fill="#5a6580" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">USER</text>
+        <text x="160" y="244" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">User browser</text>
+        <text x="160" y="260" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">session cookie</text>
+
+        <!-- Node: Attacker (external) -->
+        <rect x="72" y="384" width="176" height="64" rx="6" fill="#f5f5f5"/>
+        <rect x="72" y="384" width="176" height="64" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+        <rect x="80" y="392" width="44" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.22)" stroke-width="0.8"/>
+        <text x="102" y="401" fill="#5a6580" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">THREAT</text>
+        <text x="160" y="420" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Attacker</text>
+        <text x="160" y="436" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">any HTTP request</text>
+
+        <!-- Node: TLS proxy (external / platform) -->
+        <rect x="344" y="208" width="152" height="64" rx="6" fill="#f5f5f5"/>
+        <rect x="344" y="208" width="152" height="64" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+        <rect x="352" y="216" width="32" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.22)" stroke-width="0.8"/>
+        <text x="368" y="225" fill="#5a6580" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">EDGE</text>
+        <text x="420" y="244" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">TLS proxy</text>
+        <text x="420" y="260" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">HTTPS · HSTS</text>
+
+        <!-- Node: Request guards (security gate) -->
+        <rect x="592" y="208" width="168" height="64" rx="6" fill="#f5f5f5"/>
+        <rect x="592" y="208" width="168" height="64" rx="6" fill="rgba(191,69,32,0.05)" stroke="rgba(191,69,32,0.50)" stroke-width="1" stroke-dasharray="4,4"/>
+        <rect x="600" y="216" width="32" height="12" rx="2" fill="transparent" stroke="rgba(191,69,32,0.50)" stroke-width="0.8"/>
+        <text x="616" y="225" fill="#9a3517" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">GATE</text>
+        <text x="676" y="244" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Request guards</text>
+        <text x="676" y="260" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">session · CSRF · throttle</text>
+
+        <!-- Node: FastAPI app (focal) -->
+        <rect x="812" y="208" width="180" height="64" rx="6" fill="#f5f5f5"/>
+        <rect x="812" y="208" width="180" height="64" rx="6" fill="rgba(191,69,32,0.08)" stroke="#bf4520" stroke-width="1"/>
+        <rect x="820" y="216" width="28" height="12" rx="2" fill="transparent" stroke="rgba(191,69,32,0.50)" stroke-width="0.8"/>
+        <text x="834" y="225" fill="#9a3517" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">APP</text>
+        <text x="902" y="244" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">FastAPI app</text>
+        <text x="902" y="260" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">owner check in every query</text>
+
+        <!-- Node: PostgreSQL (store) -->
+        <rect x="1036" y="208" width="172" height="64" rx="6" fill="#f5f5f5"/>
+        <rect x="1036" y="208" width="172" height="64" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+        <rect x="1044" y="216" width="24" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.50)" stroke-width="0.8"/>
+        <text x="1056" y="225" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DB</text>
+        <text x="1122" y="244" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">PostgreSQL</text>
+        <text x="1122" y="260" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">notes · argon2 hashes</text>
+
+        <!-- Node: Secrets (store) -->
+        <rect x="812" y="384" width="180" height="64" rx="6" fill="#f5f5f5"/>
+        <rect x="812" y="384" width="180" height="64" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+        <rect x="820" y="392" width="28" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.50)" stroke-width="0.8"/>
+        <text x="834" y="401" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">ENV</text>
+        <text x="902" y="420" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Secrets</text>
+        <text x="902" y="436" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">SECRET_KEY · DB URL</text>
+
+        <!-- Legend strip -->
+        <line x1="40" y1="504" x2="1240" y2="504" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+        <text x="40" y="520" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">LEGEND</text>
+
+        <rect x="40" y="536" width="14" height="10" rx="2" fill="rgba(191,69,32,0.08)" stroke="#bf4520" stroke-width="1"/>
+        <text x="60" y="544" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Focal / app</text>
+
+        <rect x="152" y="536" width="14" height="10" rx="2" fill="rgba(191,69,32,0.05)" stroke="rgba(191,69,32,0.50)" stroke-width="1" stroke-dasharray="3,2"/>
+        <text x="172" y="544" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Security gate</text>
+
+        <rect x="272" y="536" width="14" height="10" rx="2" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+        <text x="292" y="544" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Store</text>
+
+        <rect x="348" y="536" width="14" height="10" rx="2" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+        <text x="368" y="544" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">External / platform</text>
+
+        <rect x="480" y="536" width="14" height="10" rx="2" fill="rgba(79,93,117,0.10)" stroke="#5a6580" stroke-width="1"/>
+        <text x="500" y="544" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">User</text>
+
+        <rect x="552" y="536" width="20" height="10" rx="2" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.30)" stroke-width="1" stroke-dasharray="6,4"/>
+        <text x="580" y="544" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Protected zone</text>
+
+        <line x1="680" y1="542" x2="708" y2="542" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+        <text x="716" y="544" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">HTTPS request</text>
+
+        <line x1="808" y1="542" x2="836" y2="542" stroke="#bf4520" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+        <text x="844" y="544" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Authenticated path</text>
+
+        <line x1="956" y1="542" x2="984" y2="542" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+        <text x="992" y="544" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Config read</text>
+
+        <line x1="1072" y1="542" x2="1096" y2="542" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="2,3"/>
+        <circle cx="1104" cy="542" r="5" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1"/>
+        <line x1="1101" y1="539" x2="1107" y2="545" stroke="#4f5d75" stroke-width="1"/>
+        <line x1="1107" y1="539" x2="1101" y2="545" stroke="#4f5d75" stroke-width="1"/>
+        <text x="1116" y="544" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Blocked: no public port</text>
+      </svg>
+    </div>
+  </div>
+</body>
+</html>

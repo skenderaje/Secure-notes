@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Sign up · SecureNotes{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>Create an account</h1>
+  <form method="post" action="/signup">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>Username <input name="username" value="{{ username or '' }}" autocomplete="username" required pattern="[A-Za-z0-9_]{3,32}" maxlength="32"></label>
+    <label>Password <input name="password" type="password" autocomplete="new-password" required minlength="12" maxlength="128"></label>
+    <p class="muted">At least 12 characters. A long passphrase is best.</p>
+    <button type="submit">Sign up</button>
+  </form>
+  <p class="muted">Already registered? <a href="/login">Log in</a></p>
+</section>
+{% endblock %}
