@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Version** | 1.0 — 2026-11-15 |
+| **Version** | 1.1 — 2026-11-15 (T4 and I5 closed by the CI pipeline) |
 | **Method** | STRIDE per element, mapped to MITRE ATT&CK (Enterprise) |
 | **Scope** | The web app in `app/`, its database and its secrets, as deployed behind a TLS-terminating host |
 | **Out of scope** | The hosting provider's own infrastructure, the user's device and browser, DNS |
@@ -106,7 +106,7 @@ Status: ✅ mitigated and tested · 🟡 partially mitigated · ❌ open (see §
 | T1 | Editing or deleting another user's note by changing the ID (IDOR) | Ownership is part of the SQL `WHERE`; foreign notes return 404 (`test_cannot_edit/delete_someone_elses_note`) | ✅ |
 | T2 | Cross-site request forgery from a malicious page | Per-session CSRF token on every form, constant-time compare, `SameSite=Lax` (`test_post_without_csrf_token_is_rejected`) | ✅ |
 | T3 | SQL injection | SQLAlchemy ORM with bound parameters; no raw SQL | ✅ |
-| T4 | Tampered dependency (supply chain) | Pinned versions in `requirements.txt` | 🟡 no automated vulnerability scan yet — phase 3 |
+| T4 | Vulnerable or tampered dependency (supply chain) | Pinned versions; pip-audit in CI fails on any known vulnerability, also weekly; CI actions pinned to commit SHAs | ✅ caught `starlette` and `python-multipart` advisories, fixed by upgrade |
 
 ### Repudiation — denying you did something
 
@@ -122,7 +122,7 @@ Status: ✅ mitigated and tested · 🟡 partially mitigated · ❌ open (see §
 | I2 | Stored XSS stealing data from other pages | Jinja2 autoescape + strict CSP, no inline script (`test_note_content_is_html_escaped`) | ✅ |
 | I3 | Username enumeration via login errors or timing | Same message and status for both cases; dummy hash on unknown user (`test_login_error_does_not_reveal_which_part_was_wrong`) | 🟡 sign-up still reveals "username taken" |
 | I4 | Database dump exposes passwords | Argon2id hashes (`test_password_is_hashed_with_argon2`) | ✅ |
-| I5 | Secrets committed to git | Secrets only from environment; `.env` git-ignored | 🟡 no secret scanner yet — phase 3 |
+| I5 | Secrets committed to git | Secrets only from environment; `.env` git-ignored; gitleaks scans the full history on every push and PR | ✅ |
 | I6 | API schema maps the app for attackers | `/docs` and `/openapi.json` disabled in production | ✅ |
 | I7 | Pages cached by shared proxies or browsers | `Cache-Control: no-store`, `Referrer-Policy: no-referrer` (`test_security_headers_present`) | ✅ |
 | I8 | Traffic sniffed in transit | TLS at the edge, HSTS in production, `Secure` cookie flag | 🟡 depends on the host's TLS setup |
@@ -155,10 +155,10 @@ How a real attacker would approach the app, and what stands in the way.
 | Credential Access | T1110.001 / .004 Brute Force: Guessing, Credential Stuffing | Password lists against `/login` | Throttle, strong-password rule, Argon2 cost | S1, S4 |
 | Initial Access | T1078 Valid Accounts | Logging in with stolen credentials | Throttle limits abuse; **no MFA yet** | S1 |
 | Credential Access | T1539 Steal Web Session Cookie | Cookie theft via XSS or sniffing | `HttpOnly`, `Secure`, CSP, TLS | S2, I2, I8 |
-| Credential Access | T1552.001 Unsecured Credentials: Credentials in Files | `SECRET_KEY` or DB URL leaked in the repo | Env-only secrets, `.env` ignored; scanner in phase 3 | I5 |
+| Credential Access | T1552.001 Unsecured Credentials: Credentials in Files | `SECRET_KEY` or DB URL leaked in the repo | Env-only secrets, `.env` ignored, gitleaks in CI | I5 |
 | Collection | T1213 Data from Information Repositories | Bulk-reading other users' notes | Owner check returns 404 for foreign IDs | I1 |
 | Impact | T1499 Endpoint Denial of Service | Flooding expensive endpoints | Input limits; **no global rate limit** | D1–D2 |
-| Initial Access | T1195.002 Compromise Software Supply Chain | Malicious or vulnerable dependency | Pinned versions; SCA scan in phase 3 | T4 |
+| Initial Access | T1195.002 Compromise Software Supply Chain | Malicious or vulnerable dependency | Pinned versions, pip-audit in CI, actions pinned to SHAs | T4 |
 
 ---
 
@@ -166,7 +166,6 @@ How a real attacker would approach the app, and what stands in the way.
 
 | Risk | Plan | Phase |
 |---|---|---|
-| No dependency or secret scanning (T4, I5) | `pip-audit`, `gitleaks`, Bandit in GitHub Actions; fail the build on high severity | 3 — CI pipeline |
 | Throttle resets on restart and is per process (S1) | Move counters to the database or Redis when running more than one instance | later |
 | No global rate limit (D2) | Rate limit at the edge or with middleware | later |
 | No audit log (R1) | Log sign-in, failed sign-in, note deletion — without note contents | later |

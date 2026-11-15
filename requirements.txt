@@ -1,8 +1,10 @@
-fastapi==0.115.6
-uvicorn[standard]==0.34.0
-sqlalchemy==2.0.36
-jinja2==3.1.5
-python-multipart==0.0.20
+fastapi==0.163.1
+# Pinned directly (FastAPI only asks for >=0.46): pip-audit then checks the exact version we ship.
+starlette==1.10.0
+uvicorn[standard]==0.54.0
+sqlalchemy==2.1.8
+jinja2==3.1.6
+python-multipart==0.0.33
 itsdangerous==2.2.0
-argon2-cffi==23.1.0
-psycopg[binary]==3.2.3
+argon2-cffi==25.1.0
+psycopg[binary]==3.3.9
