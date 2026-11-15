@@ -8,7 +8,7 @@ from fastapi import Depends, FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
@@ -188,6 +188,17 @@ def logout(request: Request, csrf: Annotated[str, Form()] = ""):
 def list_notes(request: Request, db: DB, user: CurrentUser):
     notes = db.scalars(select(Note).where(Note.owner_id == user.id).order_by(Note.updated_at.desc())).all()
     return render(request, "notes.html", notes=notes, title_max=TITLE_MAX, body_max=BODY_MAX)
+
+
+# Phase 4 exercise: this search intentionally builds SQL from user input (a seeded
+# vulnerability to be found and fixed in a follow-up pull request). Do not copy it.
+@app.get("/notes/search")
+def search_notes(request: Request, db: DB, user: CurrentUser, q: str = ""):
+    q = q.strip()[:TITLE_MAX]
+    sql = text(f"SELECT id FROM notes WHERE owner_id = {user.id} AND title LIKE '%{q}%' ORDER BY updated_at DESC")
+    ids = [row[0] for row in db.execute(sql)]
+    notes = db.scalars(select(Note).where(Note.id.in_(ids)).order_by(Note.updated_at.desc())).all()
+    return render(request, "notes.html", notes=notes, q=q, title_max=TITLE_MAX, body_max=BODY_MAX)
 
 
 @app.post("/notes")

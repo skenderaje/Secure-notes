@@ -50,6 +50,15 @@ def test_cannot_delete_someone_elses_note():
         assert db.get(Note, nid) is not None
 
 
+def test_search_finds_own_notes_by_title():
+    alice = logged_in("alice")
+    add_note(alice, "Shopping list")
+    add_note(alice, "Holiday plans")
+    page = alice.get("/notes/search", params={"q": "shop"}).text
+    assert "Shopping list" in page
+    assert "Holiday plans" not in page
+
+
 def test_note_content_is_html_escaped():
     alice = logged_in("alice")
     add_note(alice, "<script>alert(1)</script>", "<img src=x onerror=alert(1)>")

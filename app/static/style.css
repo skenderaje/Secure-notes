@@ -76,6 +76,8 @@ button.danger { color: var(--danger); }
 .muted { color: var(--muted); }
 a { color: var(--accent); }
 .note .body { white-space: pre-wrap; margin: 4px 0 8px; }
+.search { display: flex; gap: 12px; align-items: flex-end; margin-bottom: 8px; }
+.search label { flex: 1; margin-bottom: 0; }
 .actions { display: flex; gap: 16px; align-items: center; }
 .alert { padding: 8px 12px; border-radius: 6px; border: 1px solid; }
 .alert.error { color: var(--danger); border-color: var(--danger); }
