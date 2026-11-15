@@ -161,6 +161,9 @@ def login(
 ):
     check_csrf(request, csrf)
     username = username.strip()
+    # Behind the hosting proxy this is the proxy's address, so the throttle is in effect
+    # per username. X-Forwarded-For is not trusted: a client can forge it to look like a
+    # new IP on every attempt (threat model S1).
     client = request.client.host if request.client else "unknown"
     key = f"{username.lower()}|{client}"
     generic_error = "Wrong username or password."

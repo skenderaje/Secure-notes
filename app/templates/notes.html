@@ -31,7 +31,7 @@
       </div>
     </article>
   {% else %}
-    <p class="muted">No notes yet.</p>
+    <p class="muted">{% if q %}No matching notes.{% else %}No notes yet.{% endif %}</p>
   {% endfor %}
 </section>
 {% endblock %}

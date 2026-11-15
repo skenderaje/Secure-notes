@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Version** | 1.2 — 2026-11-15 (T3 updated after finding 001) |
+| **Version** | 1.3 — 2026-11-15 (S1 updated for deployment behind a proxy) |
 | **Method** | STRIDE per element, mapped to MITRE ATT&CK (Enterprise) |
 | **Scope** | The web app in `app/`, its database and its secrets, as deployed behind a TLS-terminating host |
 | **Out of scope** | The hosting provider's own infrastructure, the user's device and browser, DNS |
@@ -94,7 +94,7 @@ Status: ✅ mitigated and tested · 🟡 partially mitigated · ❌ open (see §
 
 | ID | Threat | Mitigation | Status |
 |---|---|---|---|
-| S1 | Password guessing / credential stuffing against `/login` | Per username+IP throttle, 5 failures per 15 min (`test_login_is_throttled_after_five_failures`) | 🟡 throttle is in-memory, per process |
+| S1 | Password guessing / credential stuffing against `/login` | 5 failures per 15 min per username+IP (`test_login_is_throttled_after_five_failures`). Behind the hosting proxy every client shares the proxy's IP, so it is in effect **per username**; `X-Forwarded-For` is deliberately not trusted because clients can forge it | 🟡 in-memory, per process; an attacker can lock a known username out for 15 min |
 | S2 | Forged session cookie | Cookie signed with `SECRET_KEY` (itsdangerous); app refuses to start in production without a key | ✅ |
 | S3 | Session fixation | Session cleared and recreated on login (`test_session_is_renewed_on_login`) | ✅ |
 | S4 | Weak passwords make S1 easy | 12–128 characters, must differ from username (`test_weak_password_rejected`) | 🟡 no breached-password check |
@@ -166,7 +166,7 @@ How a real attacker would approach the app, and what stands in the way.
 
 | Risk | Plan | Phase |
 |---|---|---|
-| Throttle resets on restart and is per process (S1) | Move counters to the database or Redis when running more than one instance | later |
+| Throttle resets on restart, is per process, and allows a 15-minute lockout of a known username (S1) | Move counters to the database or Redis; add a CAPTCHA or slower back-off instead of a hard lock | later |
 | No global rate limit (D2) | Rate limit at the edge or with middleware | later |
 | No audit log (R1) | Log sign-in, failed sign-in, note deletion — without note contents | later |
 | No MFA (T1078) | TOTP as an optional second factor | later |
