@@ -8,7 +8,7 @@ from fastapi import Depends, FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
@@ -190,14 +190,21 @@ def list_notes(request: Request, db: DB, user: CurrentUser):
     return render(request, "notes.html", notes=notes, title_max=TITLE_MAX, body_max=BODY_MAX)
 
 
-# Phase 4 exercise: this search intentionally builds SQL from user input (a seeded
-# vulnerability to be found and fixed in a follow-up pull request). Do not copy it.
+def like_pattern(term: str) -> str:
+    """Match `term` anywhere, treating LIKE wildcards in it as plain characters."""
+    escaped = term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{escaped}%"
+
+
 @app.get("/notes/search")
 def search_notes(request: Request, db: DB, user: CurrentUser, q: str = ""):
     q = q.strip()[:TITLE_MAX]
-    sql = text(f"SELECT id FROM notes WHERE owner_id = {user.id} AND title LIKE '%{q}%' ORDER BY updated_at DESC")
-    ids = [row[0] for row in db.execute(sql)]
-    notes = db.scalars(select(Note).where(Note.id.in_(ids)).order_by(Note.updated_at.desc())).all()
+    # The search term travels as a bound parameter, never as SQL text (finding 001).
+    notes = db.scalars(
+        select(Note)
+        .where(Note.owner_id == user.id, Note.title.ilike(like_pattern(q), escape="\\"))
+        .order_by(Note.updated_at.desc())
+    ).all()
     return render(request, "notes.html", notes=notes, q=q, title_max=TITLE_MAX, body_max=BODY_MAX)
 
 

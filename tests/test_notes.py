@@ -59,6 +59,33 @@ def test_search_finds_own_notes_by_title():
     assert "Holiday plans" not in page
 
 
+SQLI_PAYLOADS = [
+    "' OR 1=1 --",                    # classic tautology, comments out the rest
+    "x' OR '1'='1",                   # tautology without a comment
+    "' UNION SELECT id FROM notes --",  # pull every id through the result set
+]
+
+
+def test_search_cannot_read_other_users_notes_via_sql_injection():
+    # Regression test for docs/findings/001-search-sql-injection.md
+    alice, bob = logged_in("alice"), logged_in("bob")
+    add_note(alice, "Alice secret", "bank PIN reminder")
+    add_note(bob, "Bob groceries")
+    for payload in SQLI_PAYLOADS:
+        page = bob.get("/notes/search", params={"q": payload}).text
+        assert "Alice secret" not in page, payload
+        assert "bank PIN reminder" not in page, payload
+
+
+def test_search_treats_like_wildcards_literally():
+    alice = logged_in("alice")
+    add_note(alice, "100% done")
+    add_note(alice, "Holiday plans")
+    page = alice.get("/notes/search", params={"q": "%"}).text
+    assert "100% done" in page
+    assert "Holiday plans" not in page
+
+
 def test_note_content_is_html_escaped():
     alice = logged_in("alice")
     add_note(alice, "<script>alert(1)</script>", "<img src=x onerror=alert(1)>")

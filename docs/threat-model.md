@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Version** | 1.1 — 2026-11-15 (T4 and I5 closed by the CI pipeline) |
+| **Version** | 1.2 — 2026-11-15 (T3 updated after finding 001) |
 | **Method** | STRIDE per element, mapped to MITRE ATT&CK (Enterprise) |
 | **Scope** | The web app in `app/`, its database and its secrets, as deployed behind a TLS-terminating host |
 | **Out of scope** | The hosting provider's own infrastructure, the user's device and browser, DNS |
@@ -105,7 +105,7 @@ Status: ✅ mitigated and tested · 🟡 partially mitigated · ❌ open (see §
 |---|---|---|---|
 | T1 | Editing or deleting another user's note by changing the ID (IDOR) | Ownership is part of the SQL `WHERE`; foreign notes return 404 (`test_cannot_edit/delete_someone_elses_note`) | ✅ |
 | T2 | Cross-site request forgery from a malicious page | Per-session CSRF token on every form, constant-time compare, `SameSite=Lax` (`test_post_without_csrf_token_is_rejected`) | ✅ |
-| T3 | SQL injection | SQLAlchemy ORM with bound parameters; no raw SQL | ✅ |
+| T3 | SQL injection | SQLAlchemy ORM with bound parameters, no raw SQL; CI blocks string-built SQL (Bandit B608) at any severity; injection regression tests on search | ✅ broken once by the search in PR #3, fixed — see [finding 001](findings/001-search-sql-injection.md) |
 | T4 | Vulnerable or tampered dependency (supply chain) | Pinned versions; pip-audit in CI fails on any known vulnerability, also weekly; CI actions pinned to commit SHAs | ✅ caught `starlette` and `python-multipart` advisories, fixed by upgrade |
 
 ### Repudiation — denying you did something
