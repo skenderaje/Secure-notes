@@ -1,10 +1,12 @@
 # SecureNotes
 
+[![security](https://github.com/skenderaje/Secure-notes/actions/workflows/security.yml/badge.svg)](https://github.com/skenderaje/Secure-notes/actions/workflows/security.yml)
+
 A small notes app built to be secured end to end: threat-modelled, tested, scanned in CI
 and deployed. The app is deliberately simple so the security work is easy to follow.
 
-> Status: **phase 2 of 5** — app, security tests and threat model done. CI security
-> pipeline, a find-and-fix pull request and deployment are next.
+> Status: **phase 3 of 5** — app, security tests, threat model and CI security pipeline
+> done. A find-and-fix pull request and deployment are next.
 
 ## Roadmap
 
@@ -12,8 +14,8 @@ and deployed. The app is deliberately simple so the security work is easy to fol
 |---|---|---|
 | 1 | App with security controls, each covered by a test | ✅ Done |
 | 2 | [Threat model](docs/threat-model.md): STRIDE per element, mapped to MITRE ATT&CK, with a [data-flow diagram](docs/threat-model-dfd.html) of the trust boundaries | ✅ Done |
-| 3 | GitHub Actions pipeline that fails the build on high-severity findings | Next |
-| 4 | A vulnerability found and fixed through a pull request | Planned |
+| 3 | [GitHub Actions pipeline](.github/workflows/security.yml) that fails the build on high-severity findings | ✅ Done |
+| 4 | A vulnerability found and fixed through a pull request | Next |
 | 5 | Live deployment and a secure-SDLC write-up | Planned |
 
 ## Threat model
@@ -49,6 +51,29 @@ directly on GitHub.
 | Oversized input | Length limits on every field | `test_overlong_note_rejected` |
 | Secrets in code | `SECRET_KEY` and database URL from the environment; app refuses to start in production without a key | — |
 | Information disclosure | API docs disabled in production | — |
+
+## CI security pipeline
+
+[`.github/workflows/security.yml`](.github/workflows/security.yml) runs on every push to `main`,
+on every pull request and once a week. Any failing gate blocks the change.
+
+| Gate | Tool | Fails the build when |
+|---|---|---|
+| Security tests | pytest | any control's test fails |
+| Code scan (SAST) | Bandit | a high-severity finding with at least medium confidence |
+| Dependency audit (SCA) | pip-audit | any pinned runtime dependency has a known vulnerability |
+| Secret scan | gitleaks | a secret appears anywhere in the git history |
+
+Hardening of the pipeline itself: read-only token by default (only the secret scan may comment
+on pull requests), third-party actions pinned to full commit SHAs, checkout credentials not
+persisted. The weekly run catches vulnerabilities published after a change was merged.
+
+**First real finding.** Before the pipeline went live, pip-audit flagged the dependencies
+pinned in phase 1: `python-multipart 0.0.20` (6 advisories) and `starlette 0.41.3`
+(7 advisories, pulled in by FastAPI). Upgrading to `python-multipart 0.0.33` and
+`starlette 1.10.0` cleared them. The upgrade also changed when Starlette sends the session
+cookie (only when the session changes), which broke a test; the cookie flags were still
+correct, so the test now checks the two responses that set the cookie.
 
 ## Run locally
 

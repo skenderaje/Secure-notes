@@ -80,10 +80,17 @@ def test_security_headers_present():
 
 
 def test_session_cookie_flags():
-    from conftest import new_client, signup
+    from conftest import PASSWORD, new_client, signup
 
+    # Starlette only sends Set-Cookie when the session changes, so check the two
+    # responses that change it: the first page view (CSRF token) and the login.
     client = new_client()
-    resp = signup(client, "alice")
-    cookie = resp.headers.get("set-cookie", "")
-    assert "httponly" in cookie.lower()
-    assert re.search(r"samesite=lax", cookie, re.I)
+    created = client.get("/login").headers.get("set-cookie", "")
+    signup(client, "alice")
+    logged_in = client.post(
+        "/login", data={"username": "alice", "password": PASSWORD, "csrf": csrf_of(client, "/login")}
+    ).headers.get("set-cookie", "")
+    for cookie in (created, logged_in):
+        assert cookie.startswith("securenotes_session=")
+        assert "httponly" in cookie.lower()
+        assert re.search(r"samesite=lax", cookie, re.I)
