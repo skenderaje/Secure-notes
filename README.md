@@ -3,8 +3,29 @@
 A small notes app built to be secured end to end: threat-modelled, tested, scanned in CI
 and deployed. The app is deliberately simple so the security work is easy to follow.
 
-> Status: **phase 1 of 5** — app and security tests done. Threat model, CI security
+> Status: **phase 2 of 5** — app, security tests and threat model done. CI security
 > pipeline, a find-and-fix pull request and deployment are next.
+
+## Roadmap
+
+| Phase | What | Status |
+|---|---|---|
+| 1 | App with security controls, each covered by a test | ✅ Done |
+| 2 | [Threat model](docs/threat-model.md): STRIDE per element, mapped to MITRE ATT&CK, with a [data-flow diagram](docs/threat-model-dfd.html) of the trust boundaries | ✅ Done |
+| 3 | GitHub Actions pipeline that fails the build on high-severity findings | Next |
+| 4 | A vulnerability found and fixed through a pull request | Planned |
+| 5 | Live deployment and a secure-SDLC write-up | Planned |
+
+## Threat model
+
+[`docs/threat-model.md`](docs/threat-model.md) lists the assets, actors and trust boundaries,
+then walks through 23 STRIDE threats. Each one names its mitigation and the test that proves
+it, or is marked open. The open risks (dependency and secret scanning, global rate limiting,
+audit logging, MFA) feed the next phases.
+
+The polished [data-flow diagram](docs/threat-model-dfd.html) is a standalone HTML file: download
+it or open it from a local clone to view it. The Mermaid diagrams in the document render
+directly on GitHub.
 
 ## Features
 
