@@ -12,7 +12,12 @@
 </section>
 
 <section>
-  <h2>My notes</h2>
+  <form method="get" action="/notes/search" class="search">
+    <label>Search titles <input name="q" value="{{ q or '' }}" maxlength="{{ title_max }}" type="search"></label>
+    <button type="submit">Search</button>
+    {% if q %}<a href="/notes" class="muted">Clear</a>{% endif %}
+  </form>
+  <h2>{% if q %}Results for “{{ q }}”{% else %}My notes{% endif %}</h2>
   {% for note in notes %}
     <article class="card note">
       <h3>{{ note.title }}</h3>
